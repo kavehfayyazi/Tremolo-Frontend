@@ -1,11 +1,11 @@
 export type FeedbackCategory = 'body-language' | 'vocal' | 'speech'
 
 export interface FeedbackMarker {
-  category: FeedbackCategory
+  category?: FeedbackCategory
   timestamp: number // in seconds
   feedback: string
-  transcriptStartIndex: number
-  transcriptEndIndex: number
+  transcriptStartIndex?: number
+  transcriptEndIndex?: number
 }
 
 export interface AnalysisData {
@@ -16,6 +16,7 @@ export interface AnalysisData {
   transcript: string
   markers: FeedbackMarker[]
   videoUrl?: string
+  enrichedTranscript?: EnrichedTranscript
 }
 
 export interface CategoryToggle {
@@ -82,4 +83,3 @@ export interface JobStatusResponse {
   enriched_transcript?: EnrichedTranscript
   detail?: string
 }
-

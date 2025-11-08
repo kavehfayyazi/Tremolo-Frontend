@@ -1,11 +1,12 @@
 import { AnalysisData, UploadVideoResponse, JobStatusResponse, TranscriptionData, FeedbackMarker, SentenceAnalysis } from '../types'
 import { mockAnalysisData } from '../mockData'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const API_BASE_URL = 'http://0.0.0.0:8000'
 
 // Poll for job status until complete
 async function pollJobStatus(jobId: string, maxAttempts: number = 120): Promise<JobStatusResponse> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log("Polling job status...")
     const response = await fetch(`${API_BASE_URL}/api/status/${jobId}`)
     
     if (!response.ok) {
@@ -192,8 +193,11 @@ function calculateScores(
   // Use enriched_transcript fluency_score if available, otherwise calculate from markers
   let speechScore: number
   if (enrichedTranscript?.sentence_analysis?.fluency_score !== undefined) {
-    // Fluency score is likely 0-1, convert to 0-10 scale
-    speechScore = enrichedTranscript.sentence_analysis.fluency_score * 10
+    const rawFluencyScore = enrichedTranscript.sentence_analysis.fluency_score
+    console.log('Raw fluency score:', rawFluencyScore)
+    // If fluency score is 0-100 scale, divide by 10 to get 0-10 scale
+    // If fluency score is 0-1 scale, multiply by 10 to get 0-10 scale
+    speechScore = rawFluencyScore > 10 ? rawFluencyScore / 10 : rawFluencyScore * 10
   } else {
     // Fallback: calculate from filler word ratio
     const fillerWordCount = speechMarkers.length
@@ -235,6 +239,7 @@ function calculateScores(
 }
 
 export async function analyzeVideo(file: File): Promise<AnalysisData> {
+  console.log('Analyzing video...')
   try {
     // Step 1: Upload video and get job_id
     const formData = new FormData()
@@ -281,9 +286,14 @@ export async function analyzeVideo(file: File): Promise<AnalysisData> {
     )
 
     // Step 6: Return AnalysisData
+    console.log(scores)
+    console.log(jobStatus.enriched_transcript);
+    console.log(transcript);
+    console.log(markers);
     return {
       ...scores,
       transcript,
+      enrichedTranscript: jobStatus.enriched_transcript,
       markers,
     }
   } catch (error) {
@@ -293,6 +303,24 @@ export async function analyzeVideo(file: File): Promise<AnalysisData> {
     await new Promise((resolve) => setTimeout(resolve, 2000))
     return mockAnalysisData
   }
+}
+
+// Call the AI API endpoint
+export async function callAI(data?: any): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}/api/ai`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: data ? JSON.stringify(data) : undefined,
+  })
+
+  if (!response.ok) {
+    throw new Error(`AI API call failed: ${response.statusText}`)
+  }
+
+  const result = await response.json()
+  return result
 }
 
 // Helper to create a video URL from file

@@ -7,6 +7,7 @@ import ScoreDisplay from '../components/ScoreDisplay'
 import Timeline from '../components/Timeline'
 import DetailedFeedbackPanel from '../components/DetailedFeedbackPanel'
 import { feedbackData, formatTimeForFeedback } from '../data/feedbackData'
+import { callAI } from '../services/api'
 
 export default function AnalysisPage() {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
@@ -21,6 +22,8 @@ export default function AnalysisPage() {
   const [leftWidth, setLeftWidth] = useState(65) // Percentage width for left column
   const [isResizing, setIsResizing] = useState(false)
   const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null)
+  const [aiFeedbackData, setAiFeedbackData] = useState<any>(feedbackData) // Start with default feedbackData
+  const [isLoadingAI, setIsLoadingAI] = useState(false) // Loading state for AI response
   const videoRef = useRef<VideoPlayerRef>(null)
   const navigate = useNavigate()
 
@@ -38,6 +41,69 @@ export default function AnalysisPage() {
       const data = JSON.parse(storedData)
       setAnalysisData(data)
       setVideoUrl(storedVideoUrl)
+      
+      // Call AI API and add markers to analysis data
+      console.log("Calling AI API...")
+      setIsLoadingAI(true)
+      callAI(data)
+        .then((response) => {
+          console.log('AI API Response received:', response)
+          
+          // Update feedback data with AI response - transform to match feedbackData format
+          if (response.feedback && Array.isArray(response.feedback)) {
+            const transformedFeedback: Record<string, {type: string, issue: string, suggestion: string}> = {}
+            
+            response.feedback.forEach((item: any) => {
+              const mins = Math.floor(item.timestamp / 60)
+              const secs = Math.floor(item.timestamp % 60)
+              const timeKey = `${mins}:${secs.toString().padStart(2, '0')}`
+              
+              transformedFeedback[timeKey] = {
+                type: 'Speech',
+                issue: 'Speech Issue Detected',
+                suggestion: item.feedback
+              }
+            })
+            console.log('TRANSFORMED FEEDBACK:', transformedFeedback)
+            setAiFeedbackData(transformedFeedback)
+          }
+          
+          setAnalysisData((prev) => {
+            if (!prev) return prev
+            
+            // Transform AI response to match FeedbackMarker format
+            let responseArray = []
+            if (Array.isArray(response)) {
+              responseArray = response
+            } else if (response.feedback && Array.isArray(response.feedback)) {
+              responseArray = response.feedback
+            } else if (response.markers && Array.isArray(response.markers)) {
+              responseArray = response.markers
+            } else if (response) {
+              console.warn('Unexpected AI response format:', response)
+              return prev
+            }
+            
+            const aiMarkers = responseArray.map((item: any) => ({
+              timestamp: item.timestamp,
+              feedback: item.feedback,
+              category: 'speech', // Default category for AI-generated feedback
+              transcriptStartIndex: 4,
+              transcriptEndIndex: 6,
+            }))
+            
+            return {
+              ...prev,
+              markers: [...prev.markers, ...aiMarkers]
+            }
+          })
+        })
+        .catch((error) => {
+          console.error('AI API Error:', error)
+        })
+        .finally(() => {
+          setIsLoadingAI(false)
+        })
     } catch (error) {
       console.error('Failed to load analysis data:', error)
       navigate('/')
@@ -168,10 +234,22 @@ export default function AnalysisPage() {
             <div className="px-4 pb-4">
               <DetailedFeedbackPanel
                 selectedTimestamp={selectedTimestamp}
-                feedbackData={feedbackData}
+                feedbackData={aiFeedbackData}
                 formatTime={formatTimeForFeedback}
               />
             </div>
+
+            {/* AI Loading Indicator */}
+            {isLoadingAI && (
+              <div className="px-4 pb-4">
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="text-gray-600 text-sm">Loading AI-generated feedback...</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
