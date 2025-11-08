@@ -271,6 +271,8 @@ export async function analyzeVideo(file: File): Promise<AnalysisData> {
       jobStatus.enriched_transcript
     )
 
+    console.log(transcript);
+
     // Step 5: Calculate scores (use enriched_transcript data if available for better accuracy)
     const scores = calculateScores(
       markers, 
