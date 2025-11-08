@@ -49,29 +49,62 @@ npm run build
 
 The frontend expects a backend API at `http://localhost:8000` (or set `VITE_API_BASE_URL` environment variable).
 
-### API Endpoint
+### Environment Setup
 
-**POST** `/analyze`
+Create a `.env` file in the root directory:
+```
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+### API Endpoints
+
+**1. POST** `/api/upload-video`
 - **Request**: `multipart/form-data` with `video` field
-- **Response**: JSON object with:
+- **Response**: 
   ```json
   {
-    "overallScore": 8.5,
-    "bodyLanguageScore": 9.0,
-    "vocalScore": 8.0,
-    "speechScore": 8.5,
-    "transcript": "Full transcript text...",
-    "markers": [
-      {
-        "category": "speech",
-        "timestamp": 12.5,
-        "feedback": "Filler word 'um' detected",
-        "transcriptStartIndex": 67,
-        "transcriptEndIndex": 69
-      }
-    ]
+    "status": "processing",
+    "job_id": "171bd810-9d9e-4f55-87a1-5fabbebb712e"
   }
   ```
+
+**2. GET** `/api/status/{JOB_ID}`
+- **Response**: 
+  ```json
+  {
+    "status": "complete",
+    "modal_id": "fc-01K9J8Q1ZQ31HFFCPYN0FXMPXW",
+    "transcription": {
+      "status": "completed",
+      "full_text": "Full transcript text...",
+      "words": [
+        {
+          "text": "Hello",
+          "start": 0.46,
+          "end": 0.64,
+          "metrics": {
+            "wrist_velocity": 0.0,
+            "audio_intensity": 0.1081,
+            "pitch": 145.32
+          }
+        }
+      ],
+      "error": null
+    }
+  }
+  ```
+
+### How It Works
+
+1. User uploads video → Frontend calls `/api/upload-video`
+2. Backend returns `job_id`
+3. Frontend polls `/api/status/{job_id}` every 2 seconds
+4. When status is "completed", frontend processes the transcription data
+5. Frontend automatically:
+   - Detects filler words (um, uh, er, etc.)
+   - Analyzes pitch variations for monotonous tone
+   - Creates feedback markers
+   - Calculates scores
 
 ### Mock Data
 

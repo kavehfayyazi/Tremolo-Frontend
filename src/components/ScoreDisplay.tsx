@@ -85,9 +85,8 @@ export default function ScoreDisplay({
                 </button>
                 <div className="text-right">
                   <span className="text-base font-semibold text-gray-900">
-                    {item.score.toFixed(1)}
+                    {(item.score * 10).toFixed(0)}%
                   </span>
-                  <span className="text-sm font-normal text-gray-500 ml-1">/ 10</span>
                 </div>
               </div>
               {index < sortedScores.length - 1 && (
