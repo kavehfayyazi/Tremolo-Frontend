@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { analyzeVideo, createVideoUrl } from '../services/api'
-import { AnalysisData } from '../types'
 
 export default function HomePage() {
   const [isDragging, setIsDragging] = useState(false)
