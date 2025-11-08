@@ -238,7 +238,7 @@ export async function analyzeVideo(file: File): Promise<AnalysisData> {
   try {
     // Step 1: Upload video and get job_id
     const formData = new FormData()
-    formData.append('video', file)
+    formData.append('file', file)
 
     const uploadResponse = await fetch(`${API_BASE_URL}/api/upload-video`, {
       method: 'POST',
